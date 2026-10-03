@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const vendor_controller_js_1 = require("../controllers/vendor.controller.js");
+const auth_js_1 = require("../middleware/auth.js");
+const rbac_js_1 = require("../middleware/rbac.js");
+const router = (0, express_1.Router)();
+router.get('/', vendor_controller_js_1.VendorController.getAll);
+router.post('/', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), vendor_controller_js_1.VendorController.create);
+router.put('/:id', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), vendor_controller_js_1.VendorController.update);
+router.delete('/:id', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN']), vendor_controller_js_1.VendorController.delete);
+exports.default = router;

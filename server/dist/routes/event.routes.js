@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const event_controller_js_1 = require("../controllers/event.controller.js");
+const auth_js_1 = require("../middleware/auth.js");
+const rbac_js_1 = require("../middleware/rbac.js");
+const router = (0, express_1.Router)();
+router.get('/', event_controller_js_1.EventController.getAll);
+router.get('/:id', event_controller_js_1.EventController.getById);
+router.post('/', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), event_controller_js_1.EventController.create);
+router.put('/:id', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), event_controller_js_1.EventController.update);
+router.delete('/:id', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), event_controller_js_1.EventController.delete);
+router.patch('/:id/status', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), event_controller_js_1.EventController.updateStatus);
+exports.default = router;

@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const attendance_controller_js_1 = require("../controllers/attendance.controller.js");
+const auth_js_1 = require("../middleware/auth.js");
+const rbac_js_1 = require("../middleware/rbac.js");
+const router = (0, express_1.Router)();
+router.post('/check-in', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER', 'VOLUNTEER']), attendance_controller_js_1.AttendanceController.checkIn);
+router.post('/check-out', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER', 'VOLUNTEER']), attendance_controller_js_1.AttendanceController.checkOut);
+router.get('/event/:id', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER', 'VOLUNTEER']), attendance_controller_js_1.AttendanceController.getEventAttendance);
+exports.default = router;

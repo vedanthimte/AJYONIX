@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const volunteer_controller_js_1 = require("../controllers/volunteer.controller.js");
+const auth_js_1 = require("../middleware/auth.js");
+const rbac_js_1 = require("../middleware/rbac.js");
+const router = (0, express_1.Router)();
+router.get('/', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), volunteer_controller_js_1.VolunteerController.getAll);
+router.post('/', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), volunteer_controller_js_1.VolunteerController.create);
+router.post('/assign', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), volunteer_controller_js_1.VolunteerController.assignDuty);
+router.get('/my-duties', auth_js_1.authenticate, volunteer_controller_js_1.VolunteerController.getMyDuties);
+router.delete('/assign/:id', auth_js_1.authenticate, (0, rbac_js_1.authorize)(['ADMIN', 'ORGANIZER']), volunteer_controller_js_1.VolunteerController.deleteAssignment);
+exports.default = router;

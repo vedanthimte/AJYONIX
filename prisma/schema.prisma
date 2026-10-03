@@ -1,0 +1,314 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  ORGANIZER
+  VOLUNTEER
+  PARTICIPANT
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum EventType {
+  HACKATHON
+  WORKSHOP
+  SEMINAR
+  CONFERENCE
+  CULTURAL
+  TECHNICAL
+  SPORTS
+  OTHER
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  ATTENDED
+}
+
+enum AttendanceStatus {
+  CHECKED_IN
+  CHECKED_OUT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum AnnouncementType {
+  NORMAL
+  IMPORTANT
+  EMERGENCY
+}
+
+enum FeedbackSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+model User {
+  id             String                @id @default(uuid())
+  name           String
+  email          String                @unique
+  password       String
+  role           Role                  @default(PARTICIPANT)
+  phone          String?
+  department     String?
+  avatar         String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  // Relationships
+  eventsOrganized      Event[]               @relation("EventOrganizer")
+  registrations        Registration[]
+  attendanceRecords    Attendance[]
+  feedbackList         Feedback[]
+  announcements        Announcement[]        @relation("UserAnnouncements")
+  volunteerProfile     Volunteer?
+  notifications        Notification[]
+}
+
+model Event {
+  id                String                @id @default(uuid())
+  name              String
+  description       String
+  type              EventType             @default(OTHER)
+  date              DateTime
+  startTime         String
+  endTime           String
+  venueId           String?
+  venueName         String?
+  capacity          Int
+  registrationFee   Float                 @default(0)
+  organizerId       String
+  image             String?
+  status            EventStatus           @default(DRAFT)
+  registrationOpen  DateTime?
+  registrationClose DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  // Relationships
+  organizer         User                  @relation("EventOrganizer", fields: [organizerId], references: [id])
+  venue             Venue?                @relation(fields: [venueId], references: [id])
+  registrations     Registration[]
+  attendance        Attendance[]
+  volunteerAssignments VolunteerAssignment[]
+  financeTransactions  FinanceTransaction[]
+  invoices          Invoice[]
+  feedback          Feedback[]
+  announcements     Announcement[]
+  certificates      Certificate[]
+}
+
+model Venue {
+  id           String    @id @default(uuid())
+  name         String
+  location     String
+  capacity     Int
+  facilities   String
+  availability Boolean   @default(true)
+  price        Float     @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  events       Event[]
+}
+
+model Vendor {
+  id           String               @id @default(uuid())
+  name         String
+  category     String
+  contact      String
+  services     String
+  pricing      Float                @default(0)
+  rating       Float                @default(4.5)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  invoices     Invoice[]
+  transactions FinanceTransaction[]
+}
+
+model Volunteer {
+  id           String                @id @default(uuid())
+  userId       String?               @unique
+  name         String
+  email        String
+  phone        String
+  skills       String
+  availability String                @default("Available")
+  department   String
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  user         User?                 @relation(fields: [userId], references: [id])
+  assignments  VolunteerAssignment[]
+}
+
+model VolunteerAssignment {
+  id           String    @id @default(uuid())
+  eventId      String
+  volunteerId  String
+  duty         String
+  shift        String
+  status       String    @default("ASSIGNED")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  volunteer    Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+}
+
+model Registration {
+  id               String             @id @default(uuid())
+  registrationCode String             @unique
+  eventId          String
+  userId           String
+  participantName  String
+  participantEmail String
+  status           RegistrationStatus @default(CONFIRMED)
+  qrCodeData       String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  event            Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attendance       Attendance[]
+  feedback         Feedback?
+  certificate      Certificate?
+
+  @@unique([eventId, userId])
+}
+
+model Attendance {
+  id             String           @id @default(uuid())
+  registrationId String
+  eventId        String
+  userId         String
+  status         AttendanceStatus @default(CHECKED_IN)
+  checkInTime    DateTime         @default(now())
+  checkOutTime   DateTime?
+  scannedBy      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  registration   Registration     @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  event          Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FinanceTransaction {
+  id          String          @id @default(uuid())
+  eventId     String?
+  description String
+  category    String
+  amount      Float
+  type        TransactionType
+  date        DateTime        @default(now())
+  status      String          @default("COMPLETED")
+  vendorId    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  event       Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  vendor      Vendor?         @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+}
+
+model Invoice {
+  id            String    @id @default(uuid())
+  invoiceNumber String    @unique
+  eventId       String?
+  vendorId      String?
+  recipientName String
+  recipientEmail String
+  description   String
+  amount        Float
+  date          DateTime  @default(now())
+  paymentStatus String    @default("PAID")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  event         Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+}
+
+model Feedback {
+  id             String            @id @default(uuid())
+  eventId        String
+  registrationId String            @unique
+  userId         String
+  rating         Int
+  comment        String
+  sentiment      FeedbackSentiment @default(NEUTRAL)
+  sentimentScore Float             @default(0.0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  event          Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registration   Registration      @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Announcement {
+  id          String           @id @default(uuid())
+  eventId     String?
+  title       String
+  message     String
+  priority    AnnouncementType @default(NORMAL)
+  createdById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  event       Event?           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy   User             @relation("UserAnnouncements", fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model Certificate {
+  id              String       @id @default(uuid())
+  certificateCode String       @unique
+  eventId         String
+  registrationId  String       @unique
+  participantName String
+  eventName       String
+  issueDate       DateTime     @default(now())
+  qrCodeData      String
+  status          String       @default("VALID")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  event           Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registration    Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("INFO")
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
