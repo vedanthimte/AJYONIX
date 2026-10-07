@@ -6,7 +6,9 @@ import { authorize } from '../middleware/rbac.js';
 const router = Router();
 
 router.get('/my', authenticate, RegistrationController.getMyRegistrations);
+router.get('/:id/pdf', RegistrationController.downloadPassPDF);
 router.get('/:id', authenticate, RegistrationController.getById);
+router.delete('/:id', authenticate, RegistrationController.cancelRegistration);
 router.post('/event/:id', authenticate, RegistrationController.register);
 router.get('/event/:id', authenticate, authorize(['ADMIN', 'ORGANIZER', 'VOLUNTEER']), RegistrationController.getEventRegistrations);
 

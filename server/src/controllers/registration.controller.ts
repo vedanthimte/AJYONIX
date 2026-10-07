@@ -3,6 +3,7 @@ import { prisma } from '../config/prisma.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 import { QRService } from '../services/qr.service.js';
+import { PDFService } from '../services/pdf.service.js';
 import { RegistrationStatus, TransactionType } from '@prisma/client';
 
 export class RegistrationController {
@@ -195,6 +196,76 @@ export class RegistrationController {
     } catch (error: any) {
       console.error('Get registration error:', error);
       sendError(res, 'Failed to fetch registration.', 'REGISTRATION_FETCH_ERROR', 500);
+    }
+  }
+
+  static async downloadPassPDF(req: any, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      const registration = await prisma.registration.findFirst({
+        where: {
+          OR: [{ id }, { registrationCode: id }],
+        },
+        include: {
+          event: true,
+          user: { select: { department: true, phone: true } },
+        },
+      });
+
+      if (!registration) {
+        sendError(res, 'Registration pass record not found.', 'NOT_FOUND', 404);
+        return;
+      }
+
+      await PDFService.streamEventPassPDF(res, registration);
+    } catch (error: any) {
+      console.error('Download pass PDF error:', error);
+      sendError(res, 'Failed to download event pass PDF.', 'PASS_PDF_ERROR', 500);
+    }
+  }
+
+  static async cancelRegistration(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+      const userRole = req.user!.role;
+
+      const registration = await prisma.registration.findFirst({
+        where: {
+          OR: [{ id }, { registrationCode: id }],
+        },
+      });
+
+      if (!registration) {
+        sendError(res, 'Registration record not found.', 'NOT_FOUND', 404);
+        return;
+      }
+
+      // Check permission: either user owns registration or is ADMIN/ORGANIZER
+      if (registration.userId !== userId && userRole !== 'ADMIN' && userRole !== 'ORGANIZER') {
+        sendError(res, 'You are not authorized to cancel this registration.', 'FORBIDDEN', 403);
+        return;
+      }
+
+      await prisma.registration.delete({
+        where: { id: registration.id },
+      });
+
+      // Notification
+      await prisma.notification.create({
+        data: {
+          userId: registration.userId,
+          title: 'Registration Cancelled',
+          message: `Your registration for pass ${registration.registrationCode} has been cancelled.`,
+          type: 'REGISTRATION',
+        },
+      });
+
+      sendSuccess(res, null, 'Registration cancelled successfully');
+    } catch (error: any) {
+      console.error('Cancel registration error:', error);
+      sendError(res, 'Failed to cancel registration.', 'CANCEL_ERROR', 500);
     }
   }
 }

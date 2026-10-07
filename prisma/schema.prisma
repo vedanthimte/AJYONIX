@@ -117,6 +117,10 @@ model Event {
   feedback          Feedback[]
   announcements     Announcement[]
   certificates      Certificate[]
+
+  @@index([status])
+  @@index([date])
+  @@index([organizerId])
 }
 
 model Venue {
@@ -176,6 +180,9 @@ model VolunteerAssignment {
 
   event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   volunteer    Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([volunteerId])
 }
 
 model Registration {
@@ -197,6 +204,8 @@ model Registration {
   certificate      Certificate?
 
   @@unique([eventId, userId])
+  @@index([userId])
+  @@index([eventId])
 }
 
 model Attendance {
@@ -214,6 +223,10 @@ model Attendance {
   registration   Registration     @relation(fields: [registrationId], references: [id], onDelete: Cascade)
   event          Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([registrationId])
 }
 
 model FinanceTransaction {
@@ -231,6 +244,10 @@ model FinanceTransaction {
 
   event       Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
   vendor      Vendor?         @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@index([type])
+  @@index([date])
 }
 
 model Invoice {
@@ -266,6 +283,9 @@ model Feedback {
   event          Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registration   Registration      @relation(fields: [registrationId], references: [id], onDelete: Cascade)
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([userId])
 }
 
 model Announcement {
@@ -280,6 +300,9 @@ model Announcement {
 
   event       Event?           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdBy   User             @relation("UserAnnouncements", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([priority])
 }
 
 model Certificate {
@@ -297,6 +320,8 @@ model Certificate {
 
   event           Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registration    Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
 }
 
 model Notification {
@@ -311,4 +336,8 @@ model Notification {
   updatedAt DateTime @updatedAt
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([createdAt])
 }

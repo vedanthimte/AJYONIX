@@ -53,4 +53,35 @@ export class NotificationController {
       sendError(res, 'Failed to update notifications.', 'NOTIFICATION_ERROR', 500);
     }
   }
+
+  static async deleteNotification(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.userId;
+
+      await prisma.notification.deleteMany({
+        where: { id, userId },
+      });
+
+      sendSuccess(res, null, 'Notification removed');
+    } catch (error: any) {
+      console.error('Delete notification error:', error);
+      sendError(res, 'Failed to delete notification.', 'NOTIFICATION_ERROR', 500);
+    }
+  }
+
+  static async clearAll(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+
+      await prisma.notification.deleteMany({
+        where: { userId },
+      });
+
+      sendSuccess(res, null, 'All notifications cleared');
+    } catch (error: any) {
+      console.error('Clear notifications error:', error);
+      sendError(res, 'Failed to clear notifications.', 'NOTIFICATION_ERROR', 500);
+    }
+  }
 }

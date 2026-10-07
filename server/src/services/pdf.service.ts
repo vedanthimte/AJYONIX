@@ -260,4 +260,111 @@ export class PDFService {
 
     doc.end();
   }
+
+  /**
+   * Generates and streams an Official Ayojanix Digital Event Pass PDF with Scannable QR Code
+   */
+  static async streamEventPassPDF(
+    res: Response,
+    registration: {
+      registrationCode: string;
+      participantName: string;
+      participantEmail: string;
+      status: string;
+      event: {
+        name: string;
+        date: Date;
+        startTime: string;
+        endTime: string;
+        venueName?: string | null;
+        registrationFee?: number;
+      };
+      user?: {
+        department?: string | null;
+        phone?: string | null;
+      } | null;
+    }
+  ): Promise<void> {
+    const doc = new PDFDocument({
+      size: [360, 540], // Compact A6-style badge pass
+      margin: 24,
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="Ayojanix_Pass_${registration.registrationCode}.pdf"`
+    );
+
+    doc.pipe(res);
+
+    const width = 360;
+    const height = 540;
+
+    // Header Background
+    doc.rect(0, 0, width, 105).fill('#1e1b4b');
+
+    // Accent Line
+    doc.rect(0, 105, width, 4).fill('#6366f1');
+
+    // Title in Header
+    doc.fillColor('#818cf8').fontSize(9).text('AYOJANIX SMART EVENT CORE • PRMITR', 24, 20, { align: 'center', width: width - 48 });
+    doc.fillColor('#ffffff').fontSize(16).text('OFFICIAL DIGITAL EVENT PASS', 24, 36, { align: 'center', width: width - 48, bold: true } as any);
+    doc.fillColor('#cbd5e1').fontSize(8.5).text('Fast Track Verification & Admission Checkpoint', 24, 58, { align: 'center', width: width - 48 });
+
+    // Status Pill in Header
+    doc.roundedRect(width / 2 - 50, 76, 100, 18, 9).fill('#4f46e5');
+    doc.fillColor('#ffffff').fontSize(8).text(`STATUS: ${registration.status}`, width / 2 - 50, 81, { align: 'center', width: 100 });
+
+    // Participant Name Box
+    doc.fillColor('#0f172a').fontSize(16).text(registration.participantName, 24, 125, { align: 'center', width: width - 48, bold: true } as any);
+    doc.fillColor('#4f46e5').fontSize(11).text(registration.registrationCode, 24, 146, { align: 'center', width: width - 48 });
+    doc.fillColor('#64748b').fontSize(9).text(registration.participantEmail, 24, 162, { align: 'center', width: width - 48 });
+
+    // Event Info Card Box
+    doc.roundedRect(24, 182, width - 48, 80, 8).fill('#f8fafc');
+    doc.roundedRect(24, 182, width - 48, 80, 8).lineWidth(1).strokeColor('#e2e8f0').stroke();
+
+    doc.fillColor('#1e293b').fontSize(11).text(registration.event.name, 36, 192, { width: width - 72, align: 'center', bold: true } as any);
+
+    const eventDateStr = new Date(registration.event.date).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    doc.fillColor('#475569').fontSize(8.5).text(`Date & Time: ${eventDateStr} • ${registration.event.startTime} - ${registration.event.endTime}`, 36, 216, { width: width - 72, align: 'center' });
+    doc.fillColor('#475569').fontSize(8.5).text(`Venue: ${registration.event.venueName || 'Campus Main Auditorium'}`, 36, 232, { width: width - 72, align: 'center' });
+    if (registration.user?.department) {
+      doc.fillColor('#6366f1').fontSize(8).text(`Department: ${registration.user.department}`, 36, 247, { width: width - 72, align: 'center' });
+    }
+
+    // High-Resolution Scannable QR Code
+    const qrBuffer = await QRCode.toBuffer(registration.registrationCode, {
+      width: 140,
+      margin: 1,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff',
+      },
+    });
+
+    const qrX = width / 2 - 70;
+    const qrY = 276;
+    doc.roundedRect(qrX - 8, qrY - 8, 156, 156, 10).fill('#ffffff');
+    doc.roundedRect(qrX - 8, qrY - 8, 156, 156, 10).lineWidth(1.5).strokeColor('#c7d2fe').stroke();
+    doc.image(qrBuffer, qrX, qrY, { width: 140, height: 140 });
+
+    doc.fillColor('#64748b').fontSize(8).text('Scan with Ayojanix Gate Scanner at Venue Entry', 24, 442, { align: 'center', width: width - 48 });
+
+    // Decorative Cutout / Perforation Dots
+    doc.moveTo(24, 462).lineTo(width - 24, 462).strokeColor('#cbd5e1').dash(3, { space: 3 }).stroke();
+    doc.undash();
+
+    // Verification Station Protocol Notice
+    doc.fillColor('#94a3b8').fontSize(7.5).text('This is an authentic computer-verified pass. Present on mobile screen or printout.', 24, 474, { align: 'center', width: width - 48 });
+    doc.fillColor('#4338ca').fontSize(7.5).text('Prof. Ram Meghe Institute of Technology & Research, Badnera (CSE Event Cell)', 24, 488, { align: 'center', width: width - 48 });
+
+    doc.end();
+  }
 }
